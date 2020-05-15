@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 
 
 
@@ -15,10 +15,11 @@ class StackedClassifier:
     """
 
     
-    def __init__(self, models, meta_model):
+    def __init__(self, models, meta_model, interest_class=1):
         self.n_models = len(models)
         self.models = models
         self.meta_model = meta_model
+        self.interest_class = interest_class
 
 
 
@@ -31,7 +32,7 @@ class StackedClassifier:
         :rtype: None
         """
         
-        indexes_generator = KFold(n_splits=cv, shuffle=True).split(X)
+        indexes_generator = StratifiedKFold(n_splits=cv, shuffle=True).split(X, y)
         indexes = [(train_index, test_index) for train_index, test_index in indexes_generator]
         
         count = 0
@@ -44,7 +45,7 @@ class StackedClassifier:
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
                 
                 model.fit(X_train, y_train)
-                y_pred = model.predict_proba(X_test)
+                y_pred = model.predict_proba(X_test)[:, self.interest_class]
                 y_pred_model.extend(y_pred)
             
             name = "y_pred_" + str(count)
@@ -70,7 +71,7 @@ class StackedClassifier:
         
         predframe = pd.DataFrame()
         for model in self.models:
-            y_pred = model.predict_proba(X)
+            y_pred = model.predict_proba(X)[:, self.interest_class]
             name = "y_pred_" + str(count)
             predframe[name] = y_pred
             count += 1
@@ -94,7 +95,7 @@ class StackedClassifier:
         
         predframe = pd.DataFrame()
         for model in self.models:
-            y_pred = model.predict_proba(X)
+            y_pred = model.predict_proba(X)[:, self.interest_class]
             name = "y_pred_" + str(count)
             predframe[name] = y_pred
             
