@@ -1,2 +1,2 @@
 # Stacking
- Implementation of the Stacking method
+ Implementation of the Stacking method for both regression and classification.
