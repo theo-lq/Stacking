@@ -99,8 +99,8 @@ class StackedRegressor:
             predframe[name] = y_pred
             
             if all:
-                performance = metric(y, y_pred)
-                print("Model %1.0f, performance : %0.4f" % (count, performance))
+                performance = round(metric(y, y_pred), 4)
+                print("Model {} : {}".format(model.__class__.__name__, performance))
             
             count += 1
         

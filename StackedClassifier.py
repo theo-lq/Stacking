@@ -101,8 +101,8 @@ class StackedClassifier:
             
             if all:
                 y_pred = model.predict(X)
-                performance = metric(y, y_pred)
-                print("Model %1.0f, performance : %0.4f" % (count, performance))
+                performance = round(metric(y, y_pred), 4)
+                print("Model {} : {}".format(model.__class__.__name__, performance))
             
             count += 1
         
