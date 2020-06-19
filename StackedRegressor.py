@@ -56,11 +56,11 @@ class StackedRegressor:
                 count += 1
 
             X = predframe
-            y = []
+            y_predframe = []
             for _, test_index in indexes:
-                y.extend(y.iloc[test_index])
+                y_predframe.extend(y.iloc[test_index])
 
-        self.meta_model.fit(X, y)
+        self.meta_model.fit(X, y_predframe)
 
 
 
@@ -112,7 +112,7 @@ class StackedRegressor:
 
                 if all:
                     performance = metric(y, y_pred)
-                    print("Level %d - Model %s : %0.4f".format(level, model.__class__.__name__, performance))
+                    print("Level %d - Model %s : %0.4f" % (level, model.__class__.__name__, performance))
 
                 count += 1
 
