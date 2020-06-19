@@ -1,6 +1,6 @@
-import pandas as pd
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
+import pandas as pd
+from sklearn.model_selection import KFold
 
 
 
@@ -15,98 +15,113 @@ class StackedClassifier:
     """
 
     
+    
     def __init__(self, models, meta_model, interest_class=1):
-        self.n_models = len(models)
+        self.levels = len(models)
         self.models = models
         self.meta_model = meta_model
         self.interest_class = interest_class
 
 
 
-    def fit(self, X, y, cv=10):
-        """Fit all the models with X and y with cv folds.
+    def fit(self, X_train, y_train, cv=5):
+        """Fit all the models with X_train and y_train with cv folds.
         
-        :param X: A pandas DataFrame or array.
-        :param y: A pandas DataFrame or array.
+        :param X_train: A pandas DataFrame or array.
+        :param y_train: A pandas DataFrame or array.
         :param cv: A integer, positive.
         :rtype: None
         """
         
-        indexes_generator = StratifiedKFold(n_splits=cv, shuffle=True).split(X, y)
-        indexes = [(train_index, test_index) for train_index, test_index in indexes_generator]
+        X = X_train.copy()
+        y = y_train.copy()
+
+        for level in range(self.levels):
+            count = 0
+            predframe = pd.DataFrame()
+
+            indexes_generator = KFold(n_splits=cv, shuffle=True).split(X)
+            indexes = [(train_index, test_index) for train_index, test_index in indexes_generator]
+
+            for model in self.models[level]:
+                y_pred_model = []
+                for train_index, test_index in indexes:
+                    X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
+                    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+                    model.fit(X_train, y_train)
+                    y_pred = model.predict_proba(X_test)[:, self.interest_class]
+                    y_pred_model.extend(y_pred)
+
+                name = "y_pred_" + str(count)
+                predframe[name] = y_pred_model
+                count += 1
+
+            X = predframe
+            y_predframe = []
+            for _, test_index in indexes:
+                y_predframe.extend(y.iloc[test_index])
+
+        self.meta_model.fit(X, y_predframe)
+
+
+
+    def predict(self, X_test):
+        """Predict the label with the information from X_test.
         
-        count = 0
-        
-        predframe = pd.DataFrame()
-        for model in self.models:
-            y_pred_model = []
-            for train_index, test_index in indexes:
-                X_train, X_test = X.iloc[train_index, :], X.iloc[test_index, :]
-                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-                
-                model.fit(X_train, y_train)
-                y_pred = model.predict_proba(X_test)[:, self.interest_class]
-                y_pred_model.extend(y_pred)
-            
-            name = "y_pred_" + str(count)
-            predframe[name] = y_pred_model
-            count += 1
-        
-        y_for_meta_model = []
-        for _, test_index in indexes:
-            y_for_meta_model.extend(y.iloc[test_index])
-            
-        self.meta_model.fit(predframe, y_for_meta_model)
-    
-    
-    
-    def predict(self, X):
-        """Predict the label with the information from X.
-        
-        :param X: A pandas DataFrame or numpy array.
+        :param X_test: A pandas DataFrame or numpy array.
         :rtype: A numpy array.
         """
         
-        count = 0
-        
-        predframe = pd.DataFrame()
-        for model in self.models:
-            y_pred = model.predict_proba(X)[:, self.interest_class]
-            name = "y_pred_" + str(count)
-            predframe[name] = y_pred
-            count += 1
-        
+        X = X_test.copy()
+
+        for level in range(self.levels):
+            count = 0
+            predframe = pd.DataFrame()
+
+            for model in self.models[level]:
+                y_pred = model.predict_proba(X)[:, self.interest_class]
+                name = "y_pred_" + str(count)
+                predframe[name] = y_pred
+                count += 1
+
+            X = predframe
+
         y_pred_final = self.meta_model.predict(predframe)
         return y_pred_final
 
 
 
-    def evaluate(self, X, y, metric, all=True):
+    def evaluate(self, X_test, y_test, metric, all=True):
         """Score the performance of the model and of all the models if asked.
         
-        :param X: A pandas DataFrame or numpy array.
-        :param y: A pandas DataFrame or numpy array.
+        :param X_test: A pandas DataFrame or numpy array.
+        :param y_test: A pandas DataFrame or numpy array.
         :param metric: A function.
         :param all: A boolean.
         :rtype: None.
         """
-        
-        count = 0
-        
-        predframe = pd.DataFrame()
-        for model in self.models:
-            y_pred = model.predict_proba(X)[:, self.interest_class]
-            name = "y_pred_" + str(count)
-            predframe[name] = y_pred
-            
-            if all:
-                y_pred = model.predict(X)
-                performance = round(metric(y, y_pred), 4)
-                print("Model {} : {}".format(model.__class__.__name__, performance))
-            
-            count += 1
-        
-        
+        X = X_test.copy()
+        y = y_test.copy()
+
+        for level in range(self.levels):
+            count = 0
+            predframe = pd.DataFrame()
+            for model in self.models[level]:
+                y_pred = model.predict_proba(X_test)[:, self.interest_class]
+                name = "y_pred_" + str(count)
+                predframe[name] = y_pred
+
+                if all:
+                    y_pred = model.predict(X)
+                    performance = metric(y, y_pred)
+                    print("Level %d - Model %s : %0.4f" % (level, model.__class__.__name__, performance))
+
+                count += 1
+
+            X = predframe
+
+
         y_pred_final = self.meta_model.predict(predframe)
         performance = metric(y, y_pred_final)
         print("Stacked model performance : %0.4f" % performance)
