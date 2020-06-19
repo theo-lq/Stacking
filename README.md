@@ -1,7 +1,7 @@
 # Stacking
  Implementation of the Stacking method for both regression and classification.
 
-To use it, define for each layer a list of models you want to use. Then create a list to put all these layers in order. For example, if we consider you already have your $X$ and $y$ matrix/vector :
+To use it, define for each layer a list of models you want to use. Then create a list to put all these layers in order. For example, if we consider you already have your *X* and *y* matrix/vector :
 
  ```python
  from sklearn.model_selection import train_test_split
@@ -29,4 +29,8 @@ def rmse(y_true, y_pred): return mean_squared_error(y_true=y_true, y_pred=y_pred
 model.evaluate(X_test, y_test, metric=rmse)
 ```
 
-Then you can use all the methods defined.
+That's an example for a regression problem. If you only want one layer, don't forget to still have that list of list :
+
+```python
+models = [[RandomForestRegressor(n_estimators=300), NuSVR(gamma='scale'), LinearRegression()]]
+```
