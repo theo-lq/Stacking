@@ -7,7 +7,14 @@ from sklearn.model_selection import KFold
 
 
 class StackedRegressor:
+    """A simple way to form a stacked model for regression problems.
 
+    :param models: A list of models (e.g. from sklearn) going to be stacked.
+    :param meta_model: A model (e.g. from sklearn) going to perfom the final prediction.
+    :rtype: A :class: 'Classifier <Classifier>'
+    """
+    
+    
     def __init__(self, models, meta_model):
         self.levels = len(models)
         self.models = models
@@ -15,7 +22,15 @@ class StackedRegressor:
 
 
 
-    def fit(self, X_train, y_train, cv=10):
+    def fit(self, X_train, y_train, cv=5):
+        """Fit all the models with X_train and y_train with cv folds.
+        
+        :param X_train: A pandas DataFrame or array.
+        :param y_train: A pandas DataFrame or array.
+        :param cv: A integer, positive.
+        :rtype: None
+        """
+        
         X = X_train.copy()
         y = y_train.copy()
 
@@ -50,6 +65,12 @@ class StackedRegressor:
 
 
     def predict(self, X_test):
+        """Predict the label with the information from X_test.
+        
+        :param X_test: A pandas DataFrame or numpy array.
+        :rtype: A numpy array.
+        """
+        
         X = X_test.copy()
 
         for level in range(self.levels):
@@ -70,6 +91,14 @@ class StackedRegressor:
 
 
     def evaluate(self, X_test, y_test, metric, all=True):
+        """Score the performance of the model and of all the models if asked.
+        
+        :param X_test: A pandas DataFrame or numpy array.
+        :param y_test: A pandas DataFrame or numpy array.
+        :param metric: A function.
+        :param all: A boolean.
+        :rtype: None.
+        """
         X = X_test.copy()
         y = y_test.copy()
 
@@ -82,8 +111,8 @@ class StackedRegressor:
                 predframe[name] = y_pred
 
                 if all:
-                    performance = round(metric(y, y_pred), 4)
-                    print("Level {} - Model {} : {}".format(level, model.__class__.__name__, performance))
+                    performance = metric(y, y_pred)
+                    print("Level %d - Model %s : %0.4f".format(level, model.__class__.__name__, performance))
 
                 count += 1
 
